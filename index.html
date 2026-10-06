@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>tin-can-telephone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper: #eef1f5;
+    --card: #ffffff;
+    --ink: #1f2a33;
+    --soft: #647685;
+    --edge: #d2dae2;
+    --tin: #108a86;
+    --go: #2f9e8f;
+    --stop: #c2472f;
+    --shadow: 0 1px 2px rgba(31, 42, 51, .06), 0 8px 24px rgba(31, 42, 51, .10);
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #111820;
+      --card: #1a232d;
+      --ink: #e4eaf0;
+      --soft: #8c9bab;
+      --edge: #2a3844;
+      --tin: #3bc0b6;
+      --go: #4fd0bf;
+      --stop: #f08a72;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .4);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 1rem/1.5 "Nunito Sans", system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mark {
+    font: 600 .8125rem/1 "Nunito Sans", sans-serif;
+    letter-spacing: .14em;
+    text-transform: lowercase;
+    color: var(--soft);
+  }
+
+  button {
+    font: 600 1rem "Nunito Sans", sans-serif;
+    cursor: pointer;
+    border: 0;
+    border-radius: 12px;
+  }
+  :focus-visible { outline: 3px solid var(--tin); outline-offset: 2px; }
+
+  /* ---------------- Lobby ---------------- */
+
+  .lobby {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem 1.25rem 3rem;
+  }
+  .lobby-card {
+    width: min(34rem, 100%);
+    text-align: center;
+  }
+
+  .cans { width: 108px; height: 72px; margin: 0 auto 1.75rem; display: block; }
+  .cans .string {
+    stroke: var(--ink);
+    stroke-width: 2;
+    fill: none;
+    stroke-dasharray: 3 5;
+    stroke-linecap: round;
+  }
+  .cans .tin { fill: var(--tin); }
+  .cans .lid { fill: none; stroke: var(--ink); stroke-width: 2; opacity: .35; }
+
+  h1 {
+    margin: .25rem 0 .4rem;
+    font: 600 clamp(2rem, 7vw, 3rem)/1.04 "Fraunces", Georgia, serif;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+  .lobby p { margin: 0 auto 1.75rem; color: var(--soft); max-width: 28rem; }
+
+  .pickup {
+    padding: .85rem 1.6rem;
+    font-size: 1.0625rem;
+    background: var(--tin);
+    color: #fff;
+    box-shadow: var(--shadow);
+  }
+
+  .string-row {
+    display: flex;
+    gap: .5rem;
+    margin: 1.75rem auto 0;
+    width: min(30rem, 100%);
+  }
+  .string-row input {
+    flex: 1;
+    min-width: 0;
+    padding: .7rem .85rem;
+    border: 1px solid var(--edge);
+    border-radius: 11px;
+    background: var(--card);
+    color: var(--ink);
+    font: inherit;
+    font-size: .9rem;
+  }
+  .string-row button {
+    padding: .7rem 1rem;
+    background: transparent;
+    color: var(--tin);
+    border: 1px solid var(--edge);
+  }
+
+  .fine { margin-top: 1.5rem; font-size: .8125rem; color: var(--soft); }
+  .error { color: var(--stop); font-weight: 600; }
+
+  /* ---------------- Call ---------------- */
+
+  .call {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    min-height: 0;
+    padding: .9rem;
+    gap: .9rem;
+  }
+  body[data-screen="call"] .lobby { display: none; }
+  body[data-screen="call"] .call { display: flex; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  #status { font-size: .9rem; color: var(--soft); }
+
+  .stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #0c120d;
+    box-shadow: var(--shadow);
+  }
+  .remote {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #0c120d;
+    display: block;
+  }
+  /* self view: corner inset, mirrored */
+  .self-wrap {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    width: clamp(92px, 26vw, 184px);
+    aspect-ratio: 3 / 4;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, .55);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+    background: #0c120d;
+  }
+  .self {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: block;
+  }
+  .self-wrap.hushed::after {
+    content: "camera covered";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: .5rem;
+    text-align: center;
+    font-size: .75rem;
+    color: #fff;
+    background: #0c120d;
+  }
+
+  /* overlay shown until the other can is on the line */
+  .waiting {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: .75rem;
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(rgba(12,18,13,.15), rgba(12,18,13,.55));
+    color: #fff;
+  }
+  body[data-line="open"] .waiting { display: none; }
+  .waiting .big { font: 600 1.4rem/1.2 "Fraunces", Georgia, serif; }
+  .waiting .sub { font-size: .9rem; opacity: .85; max-width: 22rem; }
+  .ring {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.35);
+    border-top-color: #fff;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: .75rem;
+  }
+  .ctl {
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+  }
+  .ctl svg { width: 24px; height: 24px; }
+  .ctl .on-off { display: none; }
+  .ctl.off { background: var(--ink); color: var(--paper); }
+  .ctl.off .on { display: none; }
+  .ctl.off .on-off { display: block; }
+  .ctl.hang { background: var(--stop); color: #fff; width: 64px; }
+
+  .invite {
+    display: none;
+    align-items: center;
+    gap: .5rem;
+    padding: .35rem .35rem .35rem .85rem;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    background: var(--card);
+    font-size: .85rem;
+    color: var(--soft);
+    max-width: 48vw;
+  }
+  body[data-line="waiting"] .invite { display: inline-flex; }
+  .invite code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .invite button {
+    padding: .35rem .7rem;
+    border-radius: 999px;
+    background: var(--tin);
+    color: #fff;
+    font-size: .8rem;
+  }
+
+  @media (max-width: 420px) {
+    .invite { max-width: none; }
+    #status { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ring, .call * { animation: none !important; }
+  }
+</style>
+</head>
+
+<body data-screen="lobby" data-line="waiting">
+
+  <!-- ===================== Lobby ===================== -->
+  <div class="lobby">
+    <div class="lobby-card">
+      <svg class="cans" viewBox="0 0 108 72" aria-hidden="true">
+        <path class="string" d="M30 30 C 48 52, 60 52, 78 30"/>
+        <g>
+          <rect class="tin" x="10" y="24" width="24" height="34" rx="3"/>
+          <ellipse class="lid" cx="22" cy="24" rx="12" ry="4"/>
+        </g>
+        <g>
+          <rect class="tin" x="74" y="24" width="24" height="34" rx="3"/>
+          <ellipse class="lid" cx="86" cy="24" rx="12" ry="4"/>
+        </g>
+      </svg>
+
+      <div class="mark">tin-can-telephone</div>
+      <h1 id="lobby-title">Pick up the can</h1>
+      <p id="lobby-sub">Two cans, one string. Lift the can to switch on your camera and mic, then hand the other can to the person you want on the line.</p>
+
+      <button class="pickup" id="pickup" type="button">Pick up</button>
+
+      <div class="string-row">
+        <input id="string" readonly aria-label="The string">
+        <button id="copy" type="button">Copy string</button>
+      </div>
+
+      <p class="fine" id="fine">Your camera and video go straight to the other can — never through a middleman, never recorded.</p>
+    </div>
+  </div>
+
+  <!-- ===================== Call ===================== -->
+  <div class="call">
+    <div class="topbar">
+      <span class="mark">tin-can-telephone</span>
+      <span id="status">On the line</span>
+      <span class="invite">
+        <code id="invite-code"></code>
+        <button id="copy2" type="button">Copy string</button>
+      </span>
+    </div>
+
+    <div class="stage">
+      <video class="remote" id="remote" autoplay playsinline></video>
+      <div class="waiting">
+        <div class="ring"></div>
+        <div class="big" id="wait-title">Finding the other can</div>
+        <div class="sub" id="wait-sub">Hand over the string. The moment they pick up, you'll see each other.</div>
+      </div>
+      <div class="self-wrap" id="self-wrap">
+        <video class="self" id="self" autoplay playsinline muted></video>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="ctl" id="mic" type="button" aria-pressed="true" title="Mute">
+        <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>
+        <svg class="on-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5a3 3 0 0 1 6 0v4M15 13a3 3 0 0 1-5 2M6 11a6 6 0 0 0 9 4.5M12 17v4M3 3l18 18"/></svg>
+      </button>
+      <button class="ctl" id="cam" type="button" aria-pressed="true" title="Cover camera">
+        <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg>
+        <svg class="on-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h10M16 10l6-3v10M2 2l20 20M16 16v0a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8"/></svg>
+      </button>
+      <button class="ctl hang" id="hang" type="button" title="Hang up">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a14 14 0 0 1 18 0v3l-4 1-1-3a9 9 0 0 0-8 0l-1 3-4-1z"/></svg>
+      </button>
+    </div>
+  </div>
+
+<script type="module">
+  import {joinRoom, getRelaySockets, selfId} from 'https://esm.run/trystero@0.26.0'
+
+  const APP_ID = 'tin-can-telephone-fewclicks'
+
+  const $ = id => document.getElementById(id)
+  const body = document.body
+  const stringEl = $('string'), copyBtn = $('copy'), copyBtn2 = $('copy2')
+  const pickupBtn = $('pickup')
+  const selfVideo = $('self'), selfWrap = $('self-wrap'), remoteVideo = $('remote')
+  const statusEl = $('status'), inviteCode = $('invite-code')
+  const waitTitle = $('wait-title'), waitSub = $('wait-sub')
+  const lobbyTitle = $('lobby-title'), lobbySub = $('lobby-sub'), fine = $('fine')
+
+  // ---------- The string: random id kept after the # ----------
+
+  const makeId = () =>
+    Array.from(crypto.getRandomValues(new Uint8Array(20)),
+      b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('')
+
+  const fromString = /^[a-z0-9]{12,64}$/.test(location.hash.slice(1))
+  const roomId = fromString ? location.hash.slice(1) : makeId()
+  if (!fromString) history.replaceState(null, '', '#' + roomId)
+  addEventListener('hashchange', () => location.reload())
+
+  const remember = {
+    get: k => { try { return sessionStorage.getItem(k) } catch { return null } },
+    set: k => { try { sessionStorage.setItem(k, '1') } catch {} }
+  }
+  if (!fromString) remember.set(roomId)
+  const strungHere = !fromString || remember.get(roomId) === '1'
+
+  stringEl.value = location.href
+  inviteCode.textContent = location.href.replace(/^https?:\/\//, '')
+  stringEl.addEventListener('focus', () => stringEl.select())
+
+  const copyString = async btn => {
+    try { await navigator.clipboard.writeText(location.href) }
+    catch { stringEl.select(); document.execCommand('copy') }
+    const was = btn.textContent
+    btn.textContent = 'Copied'
+    setTimeout(() => (btn.textContent = was), 2000)
+  }
+  copyBtn.addEventListener('click', () => copyString(copyBtn))
+  copyBtn2.addEventListener('click', () => copyString(copyBtn2))
+
+  // The visitor sees a joining-flavoured lobby.
+  if (!strungHere) {
+    lobbyTitle.textContent = 'Someone’s on the other can'
+    lobbySub.textContent = 'Lift the can to switch on your camera and mic, and you’ll be connected.'
+    pickupBtn.textContent = 'Pick up'
+  }
+
+  // ---------- Call ----------
+
+  let room, media, localStream
+  const peers = new Set()
+  const shared = new Set()   // peers we've sent our stream to
+  let everConnected = false
+
+  const setStatus = () => {
+    if (peers.size) {
+      body.dataset.line = 'open'
+      statusEl.textContent = 'On the line'
+    } else {
+      body.dataset.line = 'waiting'
+      statusEl.textContent = everConnected ? 'The other can was set down' : 'Ringing'
+      if (everConnected) {
+        waitTitle.textContent = 'The other can was set down'
+        waitSub.textContent = 'They can pick the string back up any time — you’ll reconnect on your own.'
+      } else if (strungHere) {
+        waitTitle.textContent = 'Finding the other can'
+        waitSub.textContent = 'Hand over the string. The moment they pick up, you’ll see each other.'
+      } else {
+        waitTitle.textContent = 'Picking up the line'
+        waitSub.textContent = 'Connecting you to the person who gave you this string.'
+      }
+    }
+  }
+
+  const shareWith = peerId => {
+    if (!localStream || shared.has(peerId)) return
+    room.addStream(localStream, {target: peerId})
+    shared.add(peerId)
+  }
+
+  // Both cans need to send their own video, but if both offer at the same
+  // instant the WebRTC negotiations collide ("glare"). So we take turns: the
+  // can with the higher ID sends first; the other sends back only once the
+  // first stream has arrived, so one negotiation finishes before the next.
+  const greet = peerId => {
+    if (selfId > peerId) shareWith(peerId)   // I go first
+    // otherwise I wait for their stream (handled in onPeerStream)
+  }
+
+  const start = async () => {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: {facingMode: 'user'},
+        audio: {echoCancellation: true, noiseSuppression: true}
+      })
+    } catch (err) {
+      const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')
+      fine.className = 'fine error'
+      fine.textContent = denied
+        ? 'The can stays down until the browser is allowed to use your camera and mic. Allow it, then pick up again.'
+        : 'No camera or mic was found on this device, so the call can’t start.'
+      return
+    }
+
+    selfVideo.srcObject = localStream
+    selfVideo.play().catch(() => {})
+    body.dataset.screen = 'call'
+
+    room = joinRoom({appId: APP_ID}, roomId, {
+      onJoinError: () => {
+        waitTitle.textContent = 'Couldn’t reach the other can'
+        waitSub.textContent = 'You’re probably on a strict network. Try different Wi-Fi or mobile data.'
+      }
+    })
+
+    room.onPeerJoin = peerId => {
+      peers.add(peerId)
+      everConnected = true
+      greet(peerId)
+      setStatus()
+    }
+
+    room.onPeerLeave = peerId => {
+      peers.delete(peerId)
+      shared.delete(peerId)
+      if (!peers.size) { remoteVideo.srcObject = null }
+      setStatus()
+    }
+
+    room.onPeerStream = (stream, peerId) => {
+      remoteVideo.srcObject = stream
+      remoteVideo.play().catch(() => {})
+      peers.add(peerId)
+      everConnected = true
+      shareWith(peerId)   // now my turn to send back (no-op if already sent)
+      setStatus()
+    }
+
+    // Any peers already waiting: take turns the same way.
+    Object.keys(room.getPeers()).forEach(greet)
+    setStatus()
+
+    // Note when the pairing network can't be reached.
+    setInterval(() => {
+      if (peers.size) return
+      const sockets = Object.values(getRelaySockets())
+      if (!navigator.onLine || (sockets.length && !sockets.some(s => s.readyState === 1))) {
+        waitSub.textContent = 'Can’t reach the junction that joins the two cans. Check your connection.'
+      }
+    }, 5000)
+  }
+
+  pickupBtn.addEventListener('click', start, {once: true})
+
+  // ---------- Controls ----------
+
+  $('mic').addEventListener('click', e => {
+    const on = e.currentTarget.classList.toggle('off') === false
+    localStream.getAudioTracks().forEach(t => (t.enabled = on))
+    e.currentTarget.setAttribute('aria-pressed', String(on))
+    e.currentTarget.title = on ? 'Mute' : 'Unmute'
+  })
+
+  $('cam').addEventListener('click', e => {
+    const on = e.currentTarget.classList.toggle('off') === false
+    localStream.getVideoTracks().forEach(t => (t.enabled = on))
+    selfWrap.classList.toggle('hushed', !on)
+    e.currentTarget.setAttribute('aria-pressed', String(on))
+    e.currentTarget.title = on ? 'Cover camera' : 'Uncover camera'
+  })
+
+  $('hang').addEventListener('click', () => {
+    try { room && room.leave() } catch {}
+    if (localStream) localStream.getTracks().forEach(t => t.stop())
+    remoteVideo.srcObject = null
+    selfVideo.srcObject = null
+    body.dataset.screen = 'lobby'
+    body.dataset.line = 'waiting'
+    lobbyTitle.textContent = 'You hung up'
+    lobbySub.textContent = 'The string is still yours. Pick up again to get back on the line.'
+    fine.className = 'fine'
+    fine.textContent = ''
+    const again = pickupBtn.cloneNode(true)
+    again.textContent = 'Pick up again'
+    again.addEventListener('click', () => location.reload(), {once: true})
+    pickupBtn.replaceWith(again)
+  })
+
+  addEventListener('beforeunload', e => {
+    if (peers.size) e.preventDefault()
+  })
+</script>
+</body>
+</html>
